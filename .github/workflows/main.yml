@@ -1,0 +1,28 @@
+name: Daily FDA Agent
+on:
+  schedule:
+    - cron: '0 15 * * *' # Runs daily at 3 PM UTC (After FDA updates)
+  workflow_dispatch:
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      - name: Dependencies
+        run: pip install google-generativeai requests resend
+      - name: Run Agent
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          MY_EMAIL: ${{ secrets.MY_EMAIL }}
+        run: python agent.py
+      - name: Update CSV
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "FDA-Agent-Bot"
+          git add drug_approvals.csv
+          git commit -m "Automated update: $(date)" || exit 0
+          git push
